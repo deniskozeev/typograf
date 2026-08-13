@@ -21,7 +21,8 @@ let package = Package(
                 .copy("Resources/typograf.min.js"),
                 .copy("Resources/typograf.titles.json"),
                 .copy("Resources/typograf.groups.json"),
-                .copy("Resources/Literata.ttf")
+                .copy("Resources/Literata.ttf"),
+                .copy("Resources/OFL.txt")
             ],
             linkerSettings: [
                 // Sparkle.framework кладётся в Contents/Frameworks бандла (см. build.sh).
