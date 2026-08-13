@@ -16,10 +16,12 @@ BUILD_NUM=$(( $(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist) 
 ./build.sh
 
 # 3. Zip (в releases/ живёт только текущая версия —
-#    appcast описывает последний релиз, старые качаются из GitHub)
+#    appcast описывает последний релиз, старые качаются из GitHub).
+#    Имя файла всегда одно и то же: так работает постоянная ссылка
+#    releases/latest/download/Typograf.zip — для кнопки «Скачать» на сайте.
 mkdir -p releases
-rm -f releases/Typograf-*.zip
-ZIP="releases/Typograf-$VERSION.zip"
+rm -f releases/Typograf*.zip
+ZIP="releases/Typograf.zip"
 ditto -c -k --keepParent build/Typograf.app "$ZIP"
 
 # 4. Appcast с EdDSA-подписью (ключ из Keychain)

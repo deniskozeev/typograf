@@ -43,7 +43,7 @@
 
 ## Установка
 
-1. Скачайте `Typograf-x.y.z.zip` из [последнего релиза](https://github.com/deniskozeev/typograf/releases/latest),
+1. [Скачайте Typograf.zip](https://github.com/deniskozeev/typograf/releases/latest/download/Typograf.zip),
    распакуйте и перенесите **Typograf.app** в «Программы».
 2. При первом запуске macOS предупредит о неизвестном разработчике —
    откройте Настройки → Конфиденциальность и безопасность → **«Всё равно
@@ -69,8 +69,7 @@
 
 [Денис Козеев](https://kozeev.ru) — разработка сайтов и веб-сервисов.
 Нашли баг или есть идея — пишите на
-[dakozeev@gmail.com](mailto:dakozeev@gmail.com) или в
-[Issues](https://github.com/deniskozeev/typograf/issues).
+[dakozeev@gmail.com](mailto:dakozeev@gmail.com).
 
 ---
 
