@@ -22,6 +22,18 @@ final class TextReplacer {
         let saved = snapshot(of: pasteboard)
         let baseline = pasteboard.changeCount
 
+        // Ждём, пока пользователь отпустит модификаторы хоткея: физически зажатые
+        // ⌃⌥⇧ смешиваются с синтетическим ⌘C, и приложение видит другое сочетание.
+        waitForModifiersRelease(deadline: Date().addingTimeInterval(0.8)) {
+            self.performCopyAndReplace(pasteboard: pasteboard, saved: saved, baseline: baseline)
+        }
+    }
+
+    private func performCopyAndReplace(
+        pasteboard: NSPasteboard,
+        saved: [[NSPasteboard.PasteboardType: Data]],
+        baseline: Int
+    ) {
         postKeystroke(keyCode: CGKeyCode(kVK_ANSI_C), flags: .maskCommand)
 
         waitForChange(of: pasteboard, baseline: baseline, deadline: Date().addingTimeInterval(0.6)) { changed in
@@ -179,6 +191,19 @@ final class TextReplacer {
             return item
         }
         pasteboard.writeObjects(items)
+    }
+
+    /// Ждёт отпускания всех модификаторов (⌃⌥⇧⌘); по таймауту продолжает как есть.
+    private func waitForModifiersRelease(deadline: Date, completion: @escaping () -> Void) {
+        let modifiers: CGEventFlags = [.maskControl, .maskAlternate, .maskShift, .maskCommand]
+        let held = CGEventSource.flagsState(.combinedSessionState).intersection(modifiers)
+        if held.isEmpty || Date() > deadline {
+            completion()
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+            self.waitForModifiersRelease(deadline: deadline, completion: completion)
+        }
     }
 
     private func waitForChange(

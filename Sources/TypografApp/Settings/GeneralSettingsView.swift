@@ -5,19 +5,31 @@ struct GeneralSettingsView: View {
     @ObservedObject private var prefs = Preferences.shared
     @State private var accessibilityGranted = AccessibilityHelper.isTrusted
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var hotkeyConflict: String?
 
     private let accessibilityTimer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Form {
             Section {
-                LabeledContent("Сочетание клавиш") {
-                    HotkeyRecorderView()
+                HStack {
+                    Text("Сочетание клавиш")
+                    Spacer()
+                    HotkeyRecorderView(conflictMessage: $hotkeyConflict)
                 }
             } footer: {
-                Text("Выделите текст в любом приложении и нажмите сочетание — текст будет типографирован и заменён на месте.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    if let hotkeyConflict {
+                        Text(hotkeyConflict)
+                            .font(.callout)
+                            .foregroundStyle(.red)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                    Text("Выделите текст в любом приложении и нажмите сочетание — текст будет типографирован и заменён на месте.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .animation(.easeOut(duration: 0.2), value: hotkeyConflict)
             }
 
             Section {

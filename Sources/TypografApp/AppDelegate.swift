@@ -155,11 +155,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func registerHotkeyFromPreferences() {
         let prefs = Preferences.shared
-        HotkeyManager.shared.register(
+        let registered = HotkeyManager.shared.register(
             keyCode: prefs.hotkeyKeyCode,
             carbonModifiers: prefs.hotkeyModifiers
         )
-        statusItem?.button?.toolTip = "Типограф — \(prefs.hotkeyDisplay)"
+        statusItem?.button?.toolTip = registered
+            ? "Типограф — \(prefs.hotkeyDisplay)"
+            : "Типограф — хоткей \(prefs.hotkeyDisplay) занят!"
+
+        // Сочетание заняли, пока Типограф не работал (или конфликт после обновления
+        // другого приложения) — говорим об этом сразу, а не молчим.
+        if !registered {
+            openSettings()
+            let alert = NSAlert()
+            alert.messageText = "Сочетание \(prefs.hotkeyDisplay) занято"
+            alert.informativeText = "Его уже использует другое приложение, поэтому типографирование сейчас не работает. Назначьте другое сочетание в настройках."
+            alert.addButton(withTitle: "Понятно")
+            alert.runModal()
+        }
     }
 
     private func observePreferences() {
