@@ -1,36 +1,36 @@
 import AppKit
 import SwiftUI
 
-/// Шрифт Nunito Sans из ресурсов — для иконки в менюбаре и всплывашки.
-enum NunitoFont {
+/// Фирменный шрифт Literata из ресурсов — для иконки в менюбаре.
+enum BrandFont {
 
-    /// Идентификатор оси вариативности 'wght'.
-    private static let weightAxis = 0x7767_6874
+    /// Оси вариативности: вес и оптический размер.
+    private static let weightAxis = 0x7767_6874  // 'wght'
+    private static let opticalAxis = 0x6F70_737A // 'opsz'
 
     static func register() {
-        guard let url = Bundle.module.url(forResource: "NunitoSans", withExtension: "ttf") else {
-            NSLog("Typograf: NunitoSans.ttf not found in bundle")
+        guard let url = Bundle.module.url(forResource: "Literata", withExtension: "ttf") else {
+            NSLog("Typograf: Literata.ttf not found in bundle")
             return
         }
         CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }
 
-    /// Nunito Sans — вариативный шрифт: вес задаётся осью 'wght' (400…1000),
+    /// Literata — вариативный шрифт: вес и оптический размер задаются осями,
     /// обычные weight-трейты дескриптора на него не действуют.
-    static func nsFont(size: CGFloat, weight: CGFloat = 700) -> NSFont {
-        guard let base = NSFont(name: "Nunito Sans", size: size)
-            ?? NSFont(name: "NunitoSans-Regular", size: size) else {
+    /// Малый opticalSize делает штрихи плотнее — то, что нужно для 16 px.
+    static func nsFont(size: CGFloat, weight: CGFloat = 700, opticalSize: CGFloat = 12) -> NSFont {
+        guard let base = NSFont(name: "Literata", size: size)
+            ?? NSFont(name: "Literata-Regular", size: size) else {
             return .systemFont(ofSize: size, weight: .bold)
         }
         let descriptor = base.fontDescriptor.addingAttributes([
-            NSFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String):
-                [NSNumber(value: weightAxis): weight]
+            NSFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): [
+                NSNumber(value: weightAxis): weight,
+                NSNumber(value: opticalAxis): opticalSize
+            ]
         ])
         return NSFont(descriptor: descriptor, size: size) ?? base
-    }
-
-    static func swiftUIFont(size: CGFloat, weight: CGFloat = 700) -> Font {
-        Font(nsFont(size: size, weight: weight))
     }
 
     /// Векторный контур глифа — для точного оптического центрирования.
@@ -42,32 +42,35 @@ enum NunitoFont {
         return CTFontCreatePathForGlyph(font, glyph, nil)
     }
 
-    /// Иконка менюбара по макету: сквиркл контуром 16×16 (штрих 1.3),
-    /// «t» semibold по центру. Всегда template — тему отрабатывает система.
+    /// Template-иконка менюбара по макету: сквиркл контуром 16×16 (штрих 1.3),
+    /// заглавная «T» Literata Bold по центру.
     static func statusBarIcon() -> NSImage {
         let side: CGFloat = 16
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
 
+            // Сквиркл на весь холст, штрих 1.3pt по внутреннему краю.
             let outline = rect.insetBy(dx: 0.65, dy: 0.65)
             context.addPath(CGPath(
                 roundedRect: outline,
-                cornerWidth: 4.35,
-                cornerHeight: 4.35,
+                cornerWidth: 4.4,
+                cornerHeight: 4.4,
                 transform: nil
             ))
             context.setStrokeColor(NSColor.black.cgColor)
             context.setLineWidth(1.3)
             context.strokePath()
 
-            // «t» — натуральный размер 14pt semibold, оптически по центру.
-            let font = nsFont(size: 14, weight: 600)
-            if let path = glyphPath(for: "t", font: font) {
+            // «T» — 11pt bold, малый оптический размер, оптически по центру.
+            let font = nsFont(size: 11, weight: 700, opticalSize: 8)
+            if let path = glyphPath(for: "T", font: font) {
                 let bounds = path.boundingBoxOfPath
+                context.saveGState()
                 context.translateBy(x: rect.midX - bounds.midX, y: rect.midY - bounds.midY)
                 context.addPath(path)
                 context.setFillColor(NSColor.black.cgColor)
                 context.fillPath()
+                context.restoreGState()
             }
             return true
         }
@@ -79,8 +82,9 @@ enum NunitoFont {
     /// чтобы её можно было анимировать и не терять template-рендер иконки.
     static func badgeDot() -> NSImage {
         NSImage(size: NSSize(width: 6, height: 6), flipped: false) { rect in
-            NSColor(calibratedRed: 0.388, green: 0.769, blue: 0.439, alpha: 1).setFill()
-            NSBezierPath(ovalIn: rect).fill()
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.setFillColor(CGColor(red: 0.39, green: 0.77, blue: 0.44, alpha: 1))
+            context.fillEllipse(in: rect)
             return true
         }
     }

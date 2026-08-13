@@ -26,15 +26,36 @@ final class TextReplacer {
 
         waitForChange(of: pasteboard, baseline: baseline, deadline: Date().addingTimeInterval(0.6)) { changed in
             guard changed,
-                  let text = pasteboard.string(forType: .string),
-                  !text.isEmpty,
-                  let processed = TypografEngine.shared.process(text) else {
+                  let raw = pasteboard.string(forType: .string),
+                  !raw.isEmpty else {
                 self.restore(pasteboard, from: saved)
                 self.busy = false
                 return
             }
 
-            guard processed != text else {
+            // Bear добавляет при копировании невидимый U+2800 перед маркерами —
+            // при вставке он приклеивается к «**» и ломает разметку. Вычищаем.
+            let text = self.sanitize(raw)
+            guard var processed = TypografEngine.shared.process(text) else {
+                self.restore(pasteboard, from: saved)
+                self.busy = false
+                return
+            }
+
+            let isMarkdown = self.looksLikeMarkdown(text)
+            if isMarkdown {
+                processed = self.fixMarkdownMarkers(processed)
+            }
+
+            // HTML-представление выделения: typograf обрабатывает текст, не трогая теги.
+            // Возвращаем его в буфер вместе с plain — иначе богатые редакторы (Ghost,
+            // Notion и т.п.) при вставке plain-текста теряют списки и заголовки.
+            // Исключение — markdown-редакторы (Bear, Obsidian…): у них разметка живёт
+            // прямо в тексте, и вставка HTML задваивает маркеры (**жирный** → ****…).
+            let html = isMarkdown ? nil : pasteboard.string(forType: .html)
+            let processedHTML = html.flatMap { TypografEngine.shared.process($0) }
+
+            guard processed != raw || (processedHTML != nil && processedHTML != html) else {
                 // Текст уже типографирован — менять нечего.
                 self.restore(pasteboard, from: saved)
                 self.busy = false
@@ -44,6 +65,9 @@ final class TextReplacer {
 
             pasteboard.clearContents()
             pasteboard.setString(processed, forType: .string)
+            if let processedHTML {
+                pasteboard.setString(processedHTML, forType: .html)
+            }
             self.postKeystroke(keyCode: CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
 
             // Даём приложению время принять вставку, затем возвращаем прежний буфер.
@@ -57,6 +81,37 @@ final class TextReplacer {
 
     private func confirm() {
         (NSApp.delegate as? AppDelegate)?.showConfirmationBadge()
+    }
+
+    /// Невидимые символы-паразиты из буфера: U+2800 (брайлевский пробел,
+    /// его вставляет Bear) и U+FEFF (BOM).
+    private func sanitize(_ text: String) -> String {
+        text.replacingOccurrences(of: "\u{2800}", with: "")
+            .replacingOccurrences(of: "\u{FEFF}", with: "")
+    }
+
+    /// Откатывает пробелы, вставленные типографом вплотную к закрывающим
+    /// markdown-маркерам: «**список:**» → «**список: **» → обратно «**список:**».
+    /// Открывающие маркеры не трогаем — за ними идёт текст, а не пробел/конец строки.
+    private func fixMarkdownMarkers(_ text: String) -> String {
+        text.replacingOccurrences(
+            of: #"(?m)([:;,.!?…»)]) (\*{1,2}|_{1,2}|~~|`)(?=\s|$)"#,
+            with: "$1$2",
+            options: .regularExpression
+        )
+    }
+
+    /// Текст содержит markdown-разметку — источник хранит её как символы,
+    /// и возвращать HTML в буфер нельзя.
+    private func looksLikeMarkdown(_ text: String) -> Bool {
+        let patterns = [
+            #"\*\*[^*\n]+\*\*"#,   // **жирный**
+            #"__[^_\n]+__"#,       // __жирный__
+            #"~~[^~\n]+~~"#,       // ~~зачёркнутый~~
+            #"`[^`\n]+`"#,         // `код`
+            #"(?m)^#{1,6} "#       // # заголовок
+        ]
+        return patterns.contains { text.range(of: $0, options: .regularExpression) != nil }
     }
 
     // MARK: - Pasteboard

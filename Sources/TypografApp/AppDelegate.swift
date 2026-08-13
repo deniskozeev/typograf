@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var badgeReset: DispatchWorkItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NunitoFont.register()
+        BrandFont.register()
         TypografEngine.shared.warmUp()
 
         setUpStatusItem()
@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
-            button.image = NunitoFont.statusBarIcon()
+            button.image = BrandFont.statusBarIcon()
             button.toolTip = "Типограф — \(Preferences.shared.hotkeyDisplay)"
             button.target = self
             button.action = #selector(statusItemClicked)
@@ -111,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let existing = badgeView, existing.superview === button {
             badge = existing
         } else {
-            badge = NSImageView(image: NunitoFont.badgeDot())
+            badge = NSImageView(image: BrandFont.badgeDot())
             badge.alphaValue = 0
             button.addSubview(badge)
             badgeView = badge
