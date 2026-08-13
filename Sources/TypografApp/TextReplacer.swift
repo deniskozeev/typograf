@@ -44,7 +44,15 @@ final class TextReplacer {
 
             let isMarkdown = self.looksLikeMarkdown(text)
             if isMarkdown {
-                processed = self.fixMarkdownMarkers(processed)
+                // Обрабатываем заново с маскировкой: код, адреса ссылок и маркеры
+                // списков типограф трогать не должен (- список → — тире, mailto: → «mailto: »).
+                let (masked, tokens) = self.maskMarkdownSyntax(text)
+                guard let processedMasked = TypografEngine.shared.process(masked) else {
+                    self.restore(pasteboard, from: saved)
+                    self.busy = false
+                    return
+                }
+                processed = self.fixMarkdownMarkers(self.unmask(processedMasked, tokens: tokens))
             }
 
             // HTML-представление выделения: typograf обрабатывает текст, не трогая теги.
@@ -88,6 +96,38 @@ final class TextReplacer {
     private func sanitize(_ text: String) -> String {
         text.replacingOccurrences(of: "\u{2800}", with: "")
             .replacingOccurrences(of: "\u{FEFF}", with: "")
+    }
+
+    /// Прячет от типографа фрагменты, где текст — это синтаксис:
+    /// блоки и вставки кода, адреса ссылок `](…)`, маркеры списков в начале строк.
+    /// Каждый фрагмент заменяется токеном из символов частной зоны Unicode.
+    private func maskMarkdownSyntax(_ text: String) -> (masked: String, tokens: [String]) {
+        var tokens: [String] = []
+        var masked = text
+        let patterns = [
+            #"```[\s\S]*?```"#,        // блок кода
+            #"`[^`\n]+`"#,             // строчный код
+            #"\]\([^)\n]+\)"#,         // адрес ссылки/картинки
+            #"(?m)^([ \t]*)[-*+](?= )"# // маркер списка
+        ]
+        for pattern in patterns {
+            let regex = try! NSRegularExpression(pattern: pattern)
+            let matches = regex.matches(in: masked, range: NSRange(masked.startIndex..., in: masked))
+            for match in matches.reversed() {
+                guard let range = Range(match.range, in: masked) else { continue }
+                tokens.append(String(masked[range]))
+                masked.replaceSubrange(range, with: "\u{E000}\(tokens.count - 1)\u{E001}")
+            }
+        }
+        return (masked, tokens)
+    }
+
+    private func unmask(_ text: String, tokens: [String]) -> String {
+        var result = text
+        for (index, token) in tokens.enumerated() {
+            result = result.replacingOccurrences(of: "\u{E000}\(index)\u{E001}", with: token)
+        }
+        return result
     }
 
     /// Откатывает пробелы, вставленные типографом вплотную к закрывающим
