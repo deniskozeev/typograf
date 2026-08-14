@@ -20,19 +20,24 @@ BUILD_NUM=$(( $(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Info.plist) 
 #    Имя файла всегда одно и то же: так работает постоянная ссылка
 #    releases/latest/download/Typograf.zip — для кнопки «Скачать» на сайте.
 mkdir -p releases
-rm -f releases/Typograf*.zip
+rm -f releases/Typograf*.zip releases/Typograf*.dmg
 ZIP="releases/Typograf.zip"
 ditto -c -k --keepParent build/Typograf.app "$ZIP"
 
-# 4. Appcast с EdDSA-подписью (ключ из Keychain)
+# 4. Appcast с EdDSA-подписью (ключ из Keychain) — до создания DMG,
+#    чтобы в фид попал только zip (обновления Sparkle идут через него)
 .build/artifacts/sparkle/Sparkle/bin/generate_appcast releases \
     --download-url-prefix "https://github.com/$REPO/releases/download/v$VERSION/"
 
+# 5. DMG для первой установки — окно «перетащите в Программы»
+DMG="releases/Typograf.dmg"
+scripts/make-dmg.sh "$DMG"
+
 echo
-echo "Готово: $ZIP + releases/appcast.xml"
+echo "Готово: $ZIP + $DMG + releases/appcast.xml"
 echo
 echo "Осталось опубликовать:"
 echo "  git add -A && git commit -m \"Release $VERSION\" && git tag v$VERSION"
 echo "  git push && git push --tags"
-echo "  gh release create v$VERSION \"$ZIP\" releases/appcast.xml \\"
+echo "  gh release create v$VERSION \"$DMG\" \"$ZIP\" releases/appcast.xml \\"
 echo "      --title \"Типограф $VERSION\" --notes \"Что нового: …\""

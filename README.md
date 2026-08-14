@@ -43,8 +43,8 @@
 
 ## Установка
 
-1. [Скачайте Typograf.zip](https://github.com/deniskozeev/typograf/releases/latest/download/Typograf.zip),
-   распакуйте и перенесите **Typograf.app** в «Программы».
+1. [Скачайте Typograf.dmg](https://github.com/deniskozeev/typograf/releases/latest/download/Typograf.dmg),
+   откройте образ и перетащите **Типограф** в папку «Программы».
 2. При первом запуске macOS предупредит о неизвестном разработчике —
    откройте Настройки → Конфиденциальность и безопасность → **«Всё равно
    открыть»**.
